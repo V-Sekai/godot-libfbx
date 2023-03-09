@@ -56,6 +56,11 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
   gltfOptions.usePBRMetRough = true;
   gltfOptions.embedResources = false;
   gltfOptions.outputBinary = false;
+  const String sink_binary = imported_folder + p_path.get_file().get_basename() + String("-") +
+      p_path.md5_text() + ".bin";
+  const String sink_binary_global = ProjectSettings::get_singleton()->globalize_path(sink_binary);
+  const std::string binaryPath = sink_binary_global.utf8().get_data();
+  gltfOptions.extBufferFilename = sink_binary_global.get_file().utf8().get_data();
 
   const auto& suffix = FileUtils::GetFileSuffix(outputPath);
 
@@ -87,10 +92,6 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
   data_render_model = Raw2Gltf(outStream, outputFolderPath, raw, gltfOptions);
   outStream.flush();
   {
-    const String sink_binary = imported_folder + p_path.get_file().get_basename() + String("-") +
-        p_path.md5_text() + ".bin";
-    const String sink_binary_global = ProjectSettings::get_singleton()->globalize_path(sink_binary);
-    const std::string binaryPath = sink_binary_global.utf8().get_data();
     // 2. Write the gltf `.bin`.
     FILE* fp = fopen(binaryPath.c_str(), "wb");
     if (fp == nullptr) {
