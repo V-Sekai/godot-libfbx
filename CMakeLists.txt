@@ -110,6 +110,8 @@ ExternalProject_Add(CPPCodec
 )
 set(CPPCODEC_INCLUDE_DIR "${CMAKE_BINARY_DIR}/cppcodec/src/CPPCodec")
 
+set(CMAKE_BUILD_TYPE Release)
+
 if (APPLE)
     find_library(CF_FRAMEWORK CoreFoundation)
     message("CoreFoundation Framework: ${CF_FRAMEWORK}")

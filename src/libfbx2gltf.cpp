@@ -21,6 +21,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -44,52 +45,20 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
   // Get global paths for source and sink.
 
   const String source_global = ProjectSettings::get_singleton()->globalize_path(p_path);
-  const String sink = String(".godot/imported/") + p_path.get_file().get_basename() + String("-") +
+  const String sink = String(".godot/imported/") + p_path.get_basename() + String("-") +
       p_path.md5_text() + String(".glb");
   const String sink_global = ProjectSettings::get_singleton()->globalize_path(sink);
 
   GltfOptions gltfOptions;
 
   gltfOptions.usePBRMetRough = true;
+  gltfOptions.embedResources = true;
   gltfOptions.outputBinary = true;
 
   std::string inputPath = source_global.utf8().get_data();
-
   std::string outputPath = sink_global.utf8().get_data();
 
-  // the output folder in .gltf mode, not used for .glb
-  std::string outputFolder;
-
-  // the path of the actual .glb or .gltf file
-  std::string modelPath;
   const auto& suffix = FileUtils::GetFileSuffix(outputPath);
-
-  // Assume binary output if extension is glb
-  if (suffix.has_value() && suffix.value() == "glb") {
-    gltfOptions.outputBinary = true;
-  }
-
-  if (gltfOptions.outputBinary) {
-    // add .glb to output path, unless it already ends in exactly that
-    outputFolder = FileUtils::getFolder(outputPath) + "/";
-    if (suffix.has_value() && suffix.value() == "glb") {
-      modelPath = outputPath;
-    } else {
-      modelPath = outputPath + ".glb";
-    }
-    // if the extension is gltf set the output folder to the parent directory
-  } else if (suffix.has_value() && suffix.value() == "gltf") {
-    outputFolder = FileUtils::getFolder(outputPath) + "/";
-    modelPath = outputPath;
-  } else {
-    // in gltf mode, we create a folder and write into that
-    outputFolder = fmt::format("{}_out/", outputPath.c_str());
-    modelPath = outputFolder + FileUtils::GetFileName(outputPath) + ".gltf";
-  }
-  if (!FileUtils::CreatePath(modelPath.c_str())) {
-    fmt::fprintf(stderr, "ERROR: Failed to create folder: %s'\n", outputFolder.c_str());
-    return nullptr;
-  }
 
   ModelData* data_render_model = nullptr;
   RawModel raw;
@@ -108,32 +77,22 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
   std::ofstream outStream; // note: auto-flushes in destructor
   const auto streamStart = outStream.tellp();
 
-  outStream.open(modelPath, std::ios::trunc | std::ios::ate | std::ios::out | std::ios::binary);
+  outStream.open(outputPath, std::ios::trunc | std::ios::ate | std::ios::out | std::ios::binary);
   if (outStream.fail()) {
-    fmt::fprintf(stderr, "ERROR:: Couldn't open file for writing: %s\n", modelPath.c_str());
+    fmt::fprintf(stderr, "ERROR:: Couldn't open file for writing: %s\n", outputPath.c_str());
     return nullptr;
   }
-  data_render_model = Raw2Gltf(outStream, outputFolder, raw, gltfOptions);
+  data_render_model = Raw2Gltf(outStream, std::string(), raw, gltfOptions);
 
-  if (gltfOptions.outputBinary) {
-    fmt::printf(
-        "Wrote %lu bytes of binary glTF to %s.\n",
-        (unsigned long)(outStream.tellp() - streamStart),
-        modelPath);
-    delete data_render_model;
-  } else {
-    delete data_render_model;
-    return nullptr;
-  }
+  delete data_render_model;
 
   // Import the generated glTF.
 
-  // Use GLTFDocument instead of glTF importer to keep image references.
   Ref<GLTFDocument> gltf;
   gltf.instantiate();
   Ref<GLTFState> state;
   state.instantiate();
-  Error err = gltf->append_from_file(sink, state, p_flags, p_path.get_base_dir());
+  Error err = gltf->append_from_file(sink, state, p_flags, "");
   if (err != OK) {
     return nullptr;
   }
