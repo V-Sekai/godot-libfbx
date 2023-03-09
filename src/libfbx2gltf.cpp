@@ -56,7 +56,7 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
   gltfOptions.usePBRMetRough = true;
   gltfOptions.embedResources = false;
   gltfOptions.outputBinary = false;
-  const String sink_binary = p_path.get_file().get_basename() + String("-") +
+  const String sink_binary = p_path.get_basename() + String("-") +
       p_path.md5_text() + ".bin";
   const String sink_binary_global = ProjectSettings::get_singleton()->globalize_path(sink_binary);
   const std::string binaryPath = sink_binary_global.utf8().get_data();
