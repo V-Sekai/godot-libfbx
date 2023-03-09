@@ -47,7 +47,7 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
   const String source_global = ProjectSettings::get_singleton()->globalize_path(p_path);
   std::string inputPath = source_global.utf8().get_data();
   const String sink =
-      imported_folder + p_path.get_basename() + String("-") + p_path.md5_text() + String(".gltf");
+      imported_folder + p_path.get_file().get_basename() + String("-") + p_path.md5_text() + String(".gltf");
   const String sink_global = ProjectSettings::get_singleton()->globalize_path(sink);
   std::string outputPath = sink_global.utf8().get_data();
 
@@ -56,7 +56,7 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
   gltfOptions.usePBRMetRough = true;
   gltfOptions.embedResources = false;
   gltfOptions.outputBinary = false;
-  const String sink_binary = imported_folder + p_path.get_file().get_basename() + String("-") +
+  const String sink_binary = p_path.get_file().get_basename() + String("-") +
       p_path.md5_text() + ".bin";
   const String sink_binary_global = ProjectSettings::get_singleton()->globalize_path(sink_binary);
   const std::string binaryPath = sink_binary_global.utf8().get_data();
@@ -87,7 +87,7 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
     return nullptr;
   }
   const String sink_folder_global =
-      ProjectSettings::get_singleton()->globalize_path(sink.get_base_dir());
+      ProjectSettings::get_singleton()->globalize_path(p_path.get_base_dir());
   std::string outputFolderPath = sink_folder_global.utf8().get_data();
   data_render_model = Raw2Gltf(outStream, outputFolderPath, raw, gltfOptions);
   outStream.flush();
@@ -119,7 +119,7 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
   gltf.instantiate();
   Ref<GLTFState> state;
   state.instantiate();
-  Error err = gltf->append_from_file(sink, state, p_flags, imported_folder);
+  Error err = gltf->append_from_file(sink, state, p_flags, p_path.get_base_dir());
   if (err != OK) {
     return nullptr;
   }
