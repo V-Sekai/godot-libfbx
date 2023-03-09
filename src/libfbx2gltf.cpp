@@ -43,20 +43,19 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
     uint32_t p_flags,
     const Dictionary& p_options) {
   // Get global paths for source and sink.
-
+  const String imported_folder = String("res://.godot/imported/");
   const String source_global = ProjectSettings::get_singleton()->globalize_path(p_path);
-  const String sink = String(".godot/imported/") + p_path.get_basename() + String("-") +
-      p_path.md5_text() + String(".glb");
+  std::string inputPath = source_global.utf8().get_data();
+  const String sink =
+      imported_folder + p_path.get_basename() + String("-") + p_path.md5_text() + String(".gltf");
   const String sink_global = ProjectSettings::get_singleton()->globalize_path(sink);
+  std::string outputPath = sink_global.utf8().get_data();
 
   GltfOptions gltfOptions;
 
   gltfOptions.usePBRMetRough = true;
-  gltfOptions.embedResources = true;
-  gltfOptions.outputBinary = true;
-
-  std::string inputPath = source_global.utf8().get_data();
-  std::string outputPath = sink_global.utf8().get_data();
+  gltfOptions.embedResources = false;
+  gltfOptions.outputBinary = false;
 
   const auto& suffix = FileUtils::GetFileSuffix(outputPath);
 
@@ -82,8 +81,35 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
     fmt::fprintf(stderr, "ERROR:: Couldn't open file for writing: %s\n", outputPath.c_str());
     return nullptr;
   }
-  data_render_model = Raw2Gltf(outStream, std::string(), raw, gltfOptions);
+  const String sink_folder_global =
+      ProjectSettings::get_singleton()->globalize_path(sink.get_base_dir());
+  std::string outputFolderPath = sink_folder_global.utf8().get_data();
+  data_render_model = Raw2Gltf(outStream, outputFolderPath, raw, gltfOptions);
 
+  const String sink_binary =
+      imported_folder + p_path.get_basename() + String("-") + p_path.md5_text() + ".bin";
+  const String sink_binary_global = ProjectSettings::get_singleton()->globalize_path(sink);
+  const std::string binaryPath = sink_binary_global.utf8().get_data();
+  FILE* fp = fopen(binaryPath.c_str(), "wb");
+  if (fp == nullptr) {
+    fmt::fprintf(stderr, "ERROR:: Couldn't open file '%s' for writing.\n", binaryPath);
+    delete data_render_model;
+    return nullptr;
+  }
+
+  if (data_render_model->binary->empty() == false) {
+    const unsigned char* binaryData = &(*data_render_model->binary)[0];
+    unsigned long binarySize = data_render_model->binary->size();
+    if (fwrite(binaryData, binarySize, 1, fp) != 1) {
+      fmt::fprintf(
+          stderr, "ERROR: Failed to write %lu bytes to file '%s'.\n", binarySize, binaryPath);
+      fclose(fp);
+      delete data_render_model;
+      return nullptr;
+    }
+    fclose(fp);
+    fmt::printf("Wrote %lu bytes of binary data to %s.\n", binarySize, binaryPath);
+  }
   delete data_render_model;
 
   // Import the generated glTF.
@@ -92,7 +118,7 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
   gltf.instantiate();
   Ref<GLTFState> state;
   state.instantiate();
-  Error err = gltf->append_from_file(sink, state, p_flags, "");
+  Error err = gltf->append_from_file(sink, state, p_flags, imported_folder);
   if (err != OK) {
     return nullptr;
   }
