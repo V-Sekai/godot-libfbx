@@ -53,7 +53,7 @@ Object* EditorSceneFormatImporterFBX2GLTF::_import_scene(
 
   GltfOptions gltfOptions;
 
-  gltfOptions.usePBRMetRough = true;
+  gltfOptions.usePBRMetRough = false;
   gltfOptions.embedResources = false;
   gltfOptions.outputBinary = false;
   const String sink_binary = p_path.get_basename() + String("-") +
